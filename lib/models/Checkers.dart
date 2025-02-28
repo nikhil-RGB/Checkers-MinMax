@@ -161,8 +161,10 @@ class Checkers {
   }
 
   //Compute moves available at a particular spot
-  List<Point> standardMoves(Point target) {
+  List<List<Point>> standardMoves(Point target) {
     List<Point> points = [];
+    List<List<Point>> results = [];
+    results.add([const Point(-11, -11)]);
     Token referenceChecker = this.board[target.x.toInt()][target.y.toInt()];
     List<List<Point>> diagonalsSoldier = this.getDiagonals(
         target.x.toInt(), target.y.toInt(), referenceChecker.isBlack());
@@ -200,11 +202,78 @@ class Checkers {
         }
       }
     }
-    return points;
+    if (points.isNotEmpty) {
+      results.add(points);
+      return results;
+    } else {
+      return [];
+    }
   }
 
 //create moves function, calculates both normal and capture moves and gives the final result for all points
-//by combining both
+//by combining both.
+//returns List<List<Point>>, if the first point in the first list is (-11,-11), this means that no capture sequences are available
+  // //This means that all moves now are standard moves in a single point list
+  // List<List<Point>> moves(Point target) {
+  //   Token referenceChecker = this.board[target.x.toInt()][target.y.toInt()];
+  //   if (referenceChecker == Token.NONE) {
+  //     throw "Should not check a blank target grid square";
+  //   }
+  //   List<List<Point>> sequences = [];
+  //   List<List<Point>> captureSequences = this.captureSequences(target);
+  //   if (captureSequences.isNotEmpty) {
+  //     return captureSequences;
+  //   }
+  //   List<Point> standardMoves = this.standardMoves(target);
+  //   if (standardMoves.isNotEmpty) {
+  //     Point marker = const Point(-11, -11);
+  //     sequences.add([marker]);
+  //     sequences.add(standardMoves);
+  //   }
+  //   return sequences;
+  // }
+
+  Map<Point, List<List<Point>>> movesMap() {
+    Map<Point, List<List<Point>>> movesMap = {};
+    String currentPlayer = this.counter % 2 == 0 ? "B" : "W";
+    CAPTURE_STANDARD_MOVE_ITERATOR:
+    //Prioritize capture moves over standard moves.
+    //Iterate first for all capture moves, and then for standard moves.
+    for (int boardChecker = 0; boardChecker < 2; ++boardChecker) {
+      for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+          Token currentGridBox = this.board[i][j];
+          Point referencePoint = Point(i, j);
+          if (currentGridBox == Token.NONE ||
+              (!currentGridBox.toString().startsWith(currentPlayer))) {
+            continue;
+          }
+          //Reference point is the current point being examined,
+          if (boardChecker == 0) {
+            List<List<Point>> captures = this.captureSequences(referencePoint);
+            if (captures.isNotEmpty) {
+              movesMap[referencePoint] = captures;
+            }
+          } else {
+            List<List<Point>> standardMoves =
+                this.standardMoves(referencePoint);
+            if (standardMoves.isNotEmpty) {
+              movesMap[referencePoint] = standardMoves;
+            }
+          }
+        }
+      }
+      if (movesMap.isNotEmpty) {
+        break CAPTURE_STANDARD_MOVE_ITERATOR;
+      }
+    }
+
+    return movesMap;
+  }
+
+  //Now, make game loop and implement logic for continued captures.
+  //Test all functions with a false board, generate the board via a LLM.
+  //Then, test the game loop with the generated board.
 }
 
 //This enum specifies the token type and affiliation
@@ -260,14 +329,14 @@ enum Token {
     }
   }
 }
-
-class Move {
-  bool isCapture = false;
-  Point targetPosition;
-  Point initialPosition;
-  Checkers board;
-  Move(
-      {required this.initialPosition,
-      required this.targetPosition,
-      required this.board});
-}
+//Possibly not required- TODO: Delete before code is put into production
+// class Move {
+//   bool isCapture = false;
+//   Point targetPosition;
+//   Point initialPosition;
+//   Checkers board;
+//   Move(
+//       {required this.initialPosition,
+//       required this.targetPosition,
+//       required this.board});
+// }
