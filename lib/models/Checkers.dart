@@ -1,6 +1,10 @@
 // ignore_for_file: unnecessary_this
 
+import 'dart:collection';
+import 'dart:convert';
+import 'dart:ffi';
 import 'dart:html';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:logger/logger.dart';
@@ -9,11 +13,94 @@ class Checkers {
   List<List<Token>> board = List.generate(8, (i) => List.filled(8, Token.NONE));
   //Board state information is stored in the instance variable above
   int counter = 0; //even means black's turn, odd means white's turn
+
   //main method here
   static void main() {
     Checkers game = Checkers();
     game.initBoard();
     game.printBoard();
+  }
+
+  //Gameloop for game, returns winner.
+  //Check for remaining opponent piece after a capture/chain is completed before updating the counter
+  //moves available are checked anyway at the start of a colour's turn.
+  String gameLoop() {
+    LinkedHashMap<Point, List<List<Point>>> moves = this.movesMap();
+    if (moves.isEmpty) {
+      return getContraryColour();
+    }
+    bool isCapturePossible = moves[moves.keys.first]![0][0].x.toInt() != -11;
+    if (isCapturePossible) {
+      int i = 0;
+      for (MapEntry entry in moves.entries) {
+        //Print all moves
+        List<List<Point>> moveList = entry.value;
+        Point source = entry.key;
+        for (int j = 0; j < moveList.length; ++j) {
+          List<Point> currentCaptureDiagonal = moveList[j];
+          print(i.toString() +
+              ")  " +
+              source.toString() +
+              ": ${j}" +
+              currentCaptureDiagonal[1].toString());
+          //enter input here
+        }
+        ++i;
+      }
+      print("Input your choice 1(source):");
+      int choice = int.parse(stdin.readLineSync(encoding: utf8)!);
+      print("Input your move number choice");
+      int choice2 = int.parse(stdin.readLineSync(encoding: utf8)!);
+      List<List<Point>> newCaps = this.executeCapture(
+          moves.keys.elementAt(choice),
+          moves.values.elementAt(choice)[choice2]);
+      //logic for continued capture
+    }
+    //logic for standard moves execution
+  }
+
+  String getContraryColour() {
+    if (counter % 2 == 0) {
+      return "W";
+    }
+    return "B";
+  }
+
+  //B: BLACK
+  //W: WHITE
+  //Check which pieces are left
+  bool arePiecesLeft(String col) {
+    for (int i = 0; i < 8; ++i) {
+      for (int j = 0; j < 8; ++j) {
+        Token current = this.board[i][j];
+        if (current.toString().contains(col)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  //WILL NOT CHECK IF THE MOVE IS VALID, ENSURE TARGET IS VALID
+  void executeStandardMove(Point source, Point target) {
+    Token referenceChecker = this.board[source.x.toInt()][source.y.toInt()];
+    this.board[target.x.toInt()][target.y.toInt()] = referenceChecker;
+    this.board[source.x.toInt()][source.y.toInt()] = Token.NONE;
+  }
+
+  //Execute captures and return possible further captures
+  //No checks, ensure supplied diagonal is  a verified capture move
+  List<List<Point>> executeCapture(Point source, List<Point> captureDiagonal) {
+    Point attackerPoint = source;
+    Point capturePoint = captureDiagonal[0];
+    Point newPosition = captureDiagonal[1];
+    Token attackChecker =
+        this.board[attackerPoint.x.toInt()][attackerPoint.y.toInt()];
+    this.board[capturePoint.x.toInt()][capturePoint.y.toInt()] = Token.NONE;
+    this.board[newPosition.x.toInt()][newPosition.y.toInt()] = attackChecker;
+    this.board[attackerPoint.x.toInt()][attackerPoint.y.toInt()] = Token.NONE;
+    return this.captureSequences(newPosition);
+    //if return is non-empty engage chained captures!
   }
 
   //Determines whether a token can be placed in the selected tile/whether the selected tile is black
@@ -65,13 +152,6 @@ class Checkers {
       concat += ("\n");
     }
     print(concat);
-  }
-
-  //come back to complete this method
-  //should present all legal moves for the current player
-  List<Point> legalMoves() {
-    List<Point> points = [];
-    return points;
   }
 
   //get diagonals, forward right, back left, forward left, back right, based on forward or backward preference
@@ -233,8 +313,8 @@ class Checkers {
   //   return sequences;
   // }
 
-  Map<Point, List<List<Point>>> movesMap() {
-    Map<Point, List<List<Point>>> movesMap = {};
+  LinkedHashMap<Point, List<List<Point>>> movesMap() {
+    LinkedHashMap<Point, List<List<Point>>> movesMap = LinkedHashMap();
     String currentPlayer = this.counter % 2 == 0 ? "B" : "W";
     CAPTURE_STANDARD_MOVE_ITERATOR:
     //Prioritize capture moves over standard moves.
