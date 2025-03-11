@@ -2,12 +2,14 @@
 
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:ffi';
-import 'dart:html';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:logger/logger.dart';
+
+void main() {
+  Checkers.main();
+}
 
 class Checkers {
   List<List<Token>> board = List.generate(8, (i) => List.filled(8, Token.NONE));
@@ -19,44 +21,119 @@ class Checkers {
     Checkers game = Checkers();
     game.initBoard();
     game.printBoard();
+
+    String winner = game.gameLoop();
+    print("THE WINNER IS: " + winner);
   }
 
   //Gameloop for game, returns winner.
   //Check for remaining opponent piece after a capture/chain is completed before updating the counter
   //moves available are checked anyway at the start of a colour's turn.
   String gameLoop() {
-    LinkedHashMap<Point, List<List<Point>>> moves = this.movesMap();
-    if (moves.isEmpty) {
-      return getContraryColour();
-    }
-    bool isCapturePossible = moves[moves.keys.first]![0][0].x.toInt() != -11;
-    if (isCapturePossible) {
-      int i = 0;
-      for (MapEntry entry in moves.entries) {
-        //Print all moves
-        List<List<Point>> moveList = entry.value;
-        Point source = entry.key;
-        for (int j = 0; j < moveList.length; ++j) {
-          List<Point> currentCaptureDiagonal = moveList[j];
-          print(i.toString() +
-              ")  " +
-              source.toString() +
-              ": ${j}" +
-              currentCaptureDiagonal[1].toString());
-          //enter input here
-        }
-        ++i;
+    while (true) {
+      this.printBoard();
+      LinkedHashMap<Point, List<List<Point>>> moves = this.movesMap();
+      if (moves.isEmpty) {
+        return getContraryColour();
       }
-      print("Input your choice 1(source):");
-      int choice = int.parse(stdin.readLineSync(encoding: utf8)!);
-      print("Input your move number choice");
-      int choice2 = int.parse(stdin.readLineSync(encoding: utf8)!);
-      List<List<Point>> newCaps = this.executeCapture(
-          moves.keys.elementAt(choice),
-          moves.values.elementAt(choice)[choice2]);
-      //logic for continued capture
+      bool isCapturePossible = moves[moves.keys.first]![0][0].x.toInt() != -11;
+      if (isCapturePossible) {
+        int i = 0;
+        for (MapEntry entry in moves.entries) {
+          //Print all moves
+          List<List<Point>> moveList = entry.value;
+          Point source = entry.key;
+          for (int j = 0; j < moveList.length; ++j) {
+            List<Point> currentCaptureDiagonal = moveList[j];
+            print(i.toString() +
+                ")  " +
+                source.toString() +
+                ": ${j}" +
+                currentCaptureDiagonal[1].toString());
+            //enter input here
+          }
+          ++i;
+        }
+        print("Input your choice 1(source):");
+        int choice = int.parse(stdin.readLineSync(encoding: utf8)!);
+        print("Input your move number choice");
+        int choice2 = int.parse(stdin.readLineSync(encoding: utf8)!);
+        List<List<Point>> newCaps = this.executeCapture(
+            moves.keys.elementAt(choice),
+            moves.values.elementAt(choice)[choice2]);
+        //logic for continued capture
+        Point newPosition = moves.values.elementAt(choice)[choice2][1];
+        this.kingAfterMove(newPosition);
+        newCaps = this.captureSequences(newPosition);
+        while (newCaps.isNotEmpty) {
+          for (List<Point> diagonal in newCaps) {
+            print("$diagonal\n");
+          }
+          print("Input your move number choice");
+          int choiceCapture = int.parse(stdin.readLineSync(encoding: utf8)!);
+
+          newCaps = this.executeCapture(newPosition, newCaps[choiceCapture]);
+          newPosition = newCaps[choiceCapture][1];
+          kingAfterMove(newPosition);
+        }
+        //before returning check for all remianing pieces of opponent's colour.
+        if (!this.arePiecesLeft(getContraryColour())) {
+          return this.getColour();
+        } //finish here
+        ++this.counter;
+      } else {
+        int i = 0;
+        List<Point> sourceChoiceList = [];
+        List<Point> moveChoiceList = [];
+
+        for (MapEntry entry in moves.entries) {
+          List<Point> moveList = entry.value[1];
+          Point source = entry.key;
+          for (Point p in moveList) {
+            print(i.toString() +
+                ") " +
+                source.toString() +
+                ' to ' +
+                p.toString());
+            sourceChoiceList.add(source);
+            moveChoiceList.add(p);
+            ++i;
+          }
+          ++i;
+        }
+        print("Input your move number choice");
+        int choiceCapture = int.parse(stdin.readLineSync(encoding: utf8)!);
+        this.executeStandardMove(
+            sourceChoiceList[choiceCapture], moveChoiceList[choiceCapture]);
+        this.kingAfterMove(moveChoiceList[choiceCapture]);
+        ++this.counter;
+      }
     }
-    //logic for standard moves execution
+  }
+
+  //Call kinging function to crown piece a king if it reaches the last row
+  //Converts a normal token to a king token if it is in it's corresponding opposite last row if it
+  //is not already a king. Returns true if it is crowned, false otherwise.
+  bool kingAfterMove(Point point) {
+    Token currentRef = this.board[point.x.toInt()][point.y.toInt()];
+    bool isWhite = currentRef.toString().contains("W");
+    int row = point.x.toInt();
+    if (row == 0 && isWhite && !currentRef.toString().contains("K")) {
+      this.board[point.x.toInt()][point.y.toInt()] = Token.WHITE_KING;
+      return true;
+    } else if (row == 7 && !isWhite && !currentRef.toString().contains("K")) {
+      this.board[point.x.toInt()][point.y.toInt()] = Token.BLACK_KING;
+      return true;
+    }
+    return false;
+  }
+
+// Current player's colour
+  String getColour() {
+    if (counter % 2 == 0) {
+      return "B";
+    }
+    return "W";
   }
 
   String getContraryColour() {
@@ -100,6 +177,7 @@ class Checkers {
     this.board[newPosition.x.toInt()][newPosition.y.toInt()] = attackChecker;
     this.board[attackerPoint.x.toInt()][attackerPoint.y.toInt()] = Token.NONE;
     return this.captureSequences(newPosition);
+
     //if return is non-empty engage chained captures!
   }
 
