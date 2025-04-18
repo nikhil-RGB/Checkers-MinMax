@@ -48,7 +48,7 @@ class Checkers {
             print(i.toString() +
                 ")  " +
                 source.toString() +
-                ": ${j}" +
+                ": ${j}) " +
                 currentCaptureDiagonal[1].toString());
             //enter input here
           }
@@ -64,17 +64,22 @@ class Checkers {
         //logic for continued capture
         Point newPosition = moves.values.elementAt(choice)[choice2][1];
         this.kingAfterMove(newPosition);
+        this.printBoard();
         newCaps = this.captureSequences(newPosition);
         while (newCaps.isNotEmpty) {
+          int i1 = 0;
           for (List<Point> diagonal in newCaps) {
-            print("$diagonal\n");
+            print("$i1) $diagonal\n");
+            ++i1;
           }
+          //GET HERE, IMPROVE CONTINUED CAPTURE LOGIC
           print("Input your move number choice");
           int choiceCapture = int.parse(stdin.readLineSync(encoding: utf8)!);
-
+          Point futurePosition = newCaps[choiceCapture][1];
           newCaps = this.executeCapture(newPosition, newCaps[choiceCapture]);
-          newPosition = newCaps[choiceCapture][1];
+          newPosition = futurePosition;
           kingAfterMove(newPosition);
+          this.printBoard();
         }
         //before returning check for all remianing pieces of opponent's colour.
         if (!this.arePiecesLeft(getContraryColour())) {
@@ -99,7 +104,7 @@ class Checkers {
             moveChoiceList.add(p);
             ++i;
           }
-          ++i;
+          //remove extra ++i;
         }
         print("Input your move number choice");
         int choiceCapture = int.parse(stdin.readLineSync(encoding: utf8)!);
@@ -223,9 +228,10 @@ class Checkers {
   //Prints the board
   void printBoard() {
     String concat = "\n";
+
     for (int i = 0; i < 8; ++i) {
       for (int j = 0; j < 8; ++j) {
-        concat += ("${this.board[i][j]}  ");
+        concat += ("${this.board[i][j]}($i,$j)   ");
       }
       concat += ("\n");
     }
