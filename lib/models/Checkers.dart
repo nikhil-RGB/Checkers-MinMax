@@ -186,8 +186,9 @@ class Checkers {
     //if return is non-empty engage chained captures!
   }
 
+  //This function can be used to determine which tiles to colour dark in the UI
   //Determines whether a token can be placed in the selected tile/whether the selected tile is black
-  bool isTilePlayable(int r, int c) {
+  static bool isTilePlayable(int r, int c) {
     return (((r % 2 == 0) && (c % 2 != 0)) || ((r % 2 != 0) && (c % 2 == 0)));
   }
 
