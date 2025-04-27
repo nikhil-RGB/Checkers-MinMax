@@ -11,6 +11,7 @@ class CheckersBoard extends StatefulWidget {
   LinkedHashMap<Point, List<List<Point>>> possibleMoves;
   Point selectedTile = const Point(0, 0);
   Point contCapturePoint = const Point(-1, -1);
+
   @override
   State<CheckersBoard> createState() => _CheckersBoardState();
   CheckersBoard({super.key, required this.referenceBoard})
@@ -18,8 +19,20 @@ class CheckersBoard extends StatefulWidget {
 }
 
 class _CheckersBoardState extends State<CheckersBoard> {
+  List<Point> greenPoints = [];
   @override
   Widget build(BuildContext context) {
+    greenPoints = [];
+    if (widget.possibleMoves.containsKey(widget.selectedTile)) {
+      List<List<Point>> moves = widget.possibleMoves[widget.selectedTile]!;
+      if (moves[0][0] == const Point(-11, -11)) {
+        greenPoints = moves[1];
+      } else {
+        for (List<Point> capDiagonal in moves) {
+          greenPoints.add(capDiagonal[1]);
+        }
+      }
+    }
     return Center(
       child: AspectRatio(
         aspectRatio: 1,
@@ -42,11 +55,19 @@ class _CheckersBoardState extends State<CheckersBoard> {
 
     return GestureDetector(
       onTap: () => handleTilePress(row, col),
-      onLongPress: handleTileLongPress(row, col),
+      onLongPress: () => handleTileLongPress(row, col),
       child: Container(
         decoration: BoxDecoration(
-          color: !isPlayable ? Colors.white : Colors.brown,
-          border: Border.all(color: Colors.black12),
+          color: greenPoints.contains(Point(row, col))
+              ? Colors.greenAccent
+              : !isPlayable
+                  ? Colors.white
+                  : Colors.brown,
+          border: Border.all(
+              width: 2.5,
+              color: (widget.selectedTile == Point(row, col))
+                  ? Colors.greenAccent
+                  : Colors.black12),
         ),
         child: Center(
           child: CheckersPiece(tokType: piece.toString()),
@@ -62,7 +83,10 @@ class _CheckersBoardState extends State<CheckersBoard> {
       //contd capture mode
       return;
     }
-    widget.selectedTile = Point(r, c);
+    setState(() {
+      widget.selectedTile = Point(r, c);
+    });
+
     Token reference = widget.referenceBoard.board[r][c];
     if ((reference
             .toString()
