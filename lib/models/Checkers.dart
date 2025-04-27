@@ -270,6 +270,10 @@ class Checkers {
   }
 
   //Capture sequences for a particular spot
+  //This function  returns a List of List of Points- List<List<Point>>
+  //Each List<Point> is a diagonal where a capture sequence is possible from the target point.
+  //Eg: If it is possible for a capture to be made from (2,1) to (4,3)- eliminating an opponent token at (3,2), then the List<Point> will be [(3,2), (4,3)].
+  //Such a diagonal will make for one element of the final list.
   List<List<Point>> captureSequences(Point target) {
     List<List<Point>> sequences = [];
     Token referenceChecker = this.board[target.x.toInt()][target.y.toInt()];
@@ -325,7 +329,14 @@ class Checkers {
     return sequences;
   }
 
-  //Compute moves available at a particular spot
+  //Compute normal moves available at a particular spot
+  //This function uses formatted output to differentiate between a standard moves list and a capture move list(an output from another function)
+  //The function will return an empty list [] if no moves are available for the current target piece.
+  //if moves are available, the function returns a List of List of Points List<List<Point>>.
+  //This list has two point lists. The first one is ALWAYS [Point(-11,-11)] to indicate that this output is for a standard move, not a capture move.
+  //The second list is a list of possible Points the target token can move to eg [Point(3,4),Point(3,2)].
+  //Output may therefore look something like this:
+  //[[Point(-11,-11)] ,[Point(3,4),Point(3,2)]]
   List<List<Point>> standardMoves(Point target) {
     List<Point> points = [];
     List<List<Point>> results = [];
@@ -398,6 +409,10 @@ class Checkers {
   //   return sequences;
   // }
 
+  //This function should return a map of all possible moves for all pieces belonging to the current player.
+  //Each key is a point that refers to the possible moves for that piece.
+  //The List<List<Point>> referred to by a Point contains either the output of captureSequences() or standardMoves()- refer to
+  //the comments above these functions to understand how the output is presented.
   LinkedHashMap<Point, List<List<Point>>> movesMap() {
     LinkedHashMap<Point, List<List<Point>>> movesMap = LinkedHashMap();
     String currentPlayer = this.counter % 2 == 0 ? "B" : "W";
@@ -436,6 +451,13 @@ class Checkers {
     return movesMap;
   }
 
+  Token getAt(Point point) {
+    return this.board[point.x.toInt()][point.y.toInt()];
+  }
+
+  void setAt(Point point, Token token) {
+    this.board[point.x.toInt()][point.y.toInt()] = token;
+  }
   //Now, make game loop and implement logic for continued captures.
   //Test all functions with a false board, generate the board via a LLM.
   //Then, test the game loop with the generated board.
