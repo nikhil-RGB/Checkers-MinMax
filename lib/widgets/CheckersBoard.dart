@@ -19,6 +19,7 @@ class CheckersBoard extends StatefulWidget {
 }
 
 class _CheckersBoardState extends State<CheckersBoard> {
+  bool isGameRunning = true;
   List<Point> greenPoints = [];
   @override
   Widget build(BuildContext context) {
@@ -79,7 +80,7 @@ class _CheckersBoardState extends State<CheckersBoard> {
   //handle selection for which piece move-LONG PRESS
   //disable if contd capture is available
   void handleTileLongPress(int r, int c) {
-    if (widget.contCapturePoint != const Point(-1, -1)) {
+    if ((widget.contCapturePoint != const Point(-1, -1)) || !isGameRunning) {
       //contd capture mode
       return;
     }
@@ -87,23 +88,28 @@ class _CheckersBoardState extends State<CheckersBoard> {
       widget.selectedTile = Point(r, c);
     });
 
-    Token reference = widget.referenceBoard.board[r][c];
-    if ((reference
-            .toString()
-            .startsWith(widget.referenceBoard.getContraryColour())) ||
-        (reference == Token.NONE)) {
-      //Clicked on invalid tile,reset possible moves
-      widget.possibleMoves.clear();
-    } else {
-      widget.possibleMoves = widget.referenceBoard.movesMap();
-    }
+    // Token reference = widget.referenceBoard.board[r][c];
+    // if ((reference
+    //         .toString()
+    //         .startsWith(widget.referenceBoard.getContraryColour())) ||
+    //     (reference == Token.NONE)) {
+    //Clicked on invalid tile,with no moves- no need to clear possible moves
+    //since it is a LinkedHashMap with all moves for all pieces
+    //widget.possibleMoves.clear();
+    // } else {
+    //   widget.possibleMoves = widget.referenceBoard.movesMap();
+    // }
+    //The above else statement is redundant since moveMap only needs to be updated on a turn change or
+    //in case of a continued capture(for which handling logic is already implemented).
+    // }
   }
 
   //handle selection for final destination of piece-SHORT PRESS
   //also has to handle win condition checking and kinging of tokens
   void handleTilePress(int r, int c) {
     if (widget.possibleMoves.isEmpty ||
-        !widget.possibleMoves.containsKey(widget.selectedTile)) {
+        !widget.possibleMoves.containsKey(widget.selectedTile) ||
+        !isGameRunning) {
       return;
     }
     //Currently selected long press tile has valid moves available
@@ -126,12 +132,12 @@ class _CheckersBoardState extends State<CheckersBoard> {
       }
       //Here, execute the move and update the board
 
-      // setState(() {
       //Token at og location should be NONE
       game.setAt(originalLocation, Token.NONE);
       //Token at new location should be the checkers token moved
       game.setAt(newLocation, piece);
-      // });
+
+      widget.referenceBoard.kingAfterMove(newLocation);
     } else {
       //Control reaching here means that a piece must be eliminated alongside moving the reference piece
       //The move type is one of a capture type.
@@ -147,12 +153,12 @@ class _CheckersBoardState extends State<CheckersBoard> {
       }
       //here, execute capture and check for chained capture
       Point victimLocation = selectedDiagonal[0];
-      // setState(() {
+
       game.setAt(originalLocation, Token.NONE);
       game.setAt(victimLocation, Token.NONE);
       game.setAt(newLocation, piece);
-      // });
 
+      widget.referenceBoard.kingAfterMove(newLocation);
       //contd capture check
       contCapList = game.captureSequences(newLocation);
       if (contCapList.isNotEmpty) {
@@ -168,15 +174,82 @@ class _CheckersBoardState extends State<CheckersBoard> {
     //and continued captures
     //invalid cases= cases where a return statement is explicitly written.
     if (widget.contCapturePoint == const Point(-1, -1)) {
+      //king current player if required.
+      // widget.referenceBoard.kingAfterMove(newLocation);
+      //change location back to where piece shifting is done
       widget.referenceBoard.counter++;
       widget.possibleMoves = widget.referenceBoard.movesMap();
       widget.selectedTile = const Point(0, 0);
     } else {
+      //king current player if required.
+      // widget.referenceBoard.kingAfterMove(newLocation);
+      //change location back to where piece shifting is done
       LinkedHashMap<Point, List<List<Point>>> posMoves = LinkedHashMap();
       posMoves[widget.contCapturePoint] = contCapList;
       widget.possibleMoves = posMoves;
       widget.selectedTile = widget.contCapturePoint;
     }
     setState(() {});
+    //Check if the game is over. If so, display the winner.
+    if (widget.possibleMoves.isEmpty) {
+      isGameRunning = false;
+      String winner = widget.referenceBoard.getContraryColour();
+      winner = (winner == "W") ? "White" : "Black";
+      showGameOverDialog(context, winner);
+    }
   }
+}
+
+void showGameOverDialog(BuildContext context, String winner) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.brown, width: 2),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Game Over',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '$winner has won the game!', // Removed draw condition
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  minimumSize: const Size(120, 40),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

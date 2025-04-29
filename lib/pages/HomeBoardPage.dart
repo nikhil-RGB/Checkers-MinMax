@@ -14,8 +14,18 @@ class _HomeCheckersPageState extends State<HomeCheckersPage> {
     referenceGame.initBoard();
     return SafeArea(
         child: Scaffold(
-      body: Center(
-        child: CheckersBoard(referenceBoard: referenceGame),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+              image: AssetImage("assets/images/wood-background.jpg"),
+              fit: BoxFit.cover),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            child: CheckersBoard(referenceBoard: referenceGame),
+          ),
+        ),
       ),
     ));
   }
