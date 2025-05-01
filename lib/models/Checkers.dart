@@ -458,9 +458,50 @@ class Checkers {
   void setAt(Point point, Token token) {
     this.board[point.x.toInt()][point.y.toInt()] = token;
   }
-  //Now, make game loop and implement logic for continued captures.
-  //Test all functions with a false board, generate the board via a LLM.
-  //Then, test the game loop with the generated board.
+
+  //Minimax related functions start from here:
+
+  //1- This function clones the current board and returns a copy of it
+  Checkers cloneGame() {
+    Checkers cloneBoard = Checkers();
+    cloneBoard.board =
+        this.board.map((innerList) => List<Token>.from(innerList)).toList();
+    return cloneBoard;
+  }
+
+  //2- This function returns a List of all the children from a current board
+  //i.e: All possible boards which can emerge from one reference state(this)
+  List<Checkers> stepInto() {
+    Checkers refBoard = this;
+    List<Checkers> childBoards = [];
+    LinkedHashMap<Point, List<List<Point>>> availableMoves =
+        refBoard.movesMap();
+    availableMoves.forEach((ogLocation, moves) {
+      //Iterate through the map to check every move at every point
+      //Here moves is a List<List<Point>> moveset for Point ogLocation
+      bool isCapture = moves[0][0] != const Point(-11, -11);
+      if (isCapture) {
+        //also handle chained captures
+        //handle all following moves here as well
+        for (List<Point> capDiagonal in moves) {
+          Checkers childBoardCap = refBoard.cloneGame();
+          List<List<Point>> newCaps =
+              childBoardCap.executeCapture(ogLocation, capDiagonal);
+          if (newCaps.isEmpty) {
+            childBoards.add(childBoardCap);
+          }
+          while (newCaps.isNotEmpty) {
+            Checkers contCapBoard = childBoardCap.cloneGame();
+            //handle contd captures
+          }
+        }
+      } else {
+        //handle standard move play for minimax
+      }
+      //Must handle chained captures
+    });
+    return childBoards;
+  }
 }
 
 //This enum specifies the token type and affiliation
@@ -516,14 +557,3 @@ enum Token {
     }
   }
 }
-//Possibly not required- TODO: Delete before code is put into production
-// class Move {
-//   bool isCapture = false;
-//   Point targetPosition;
-//   Point initialPosition;
-//   Checkers board;
-//   Move(
-//       {required this.initialPosition,
-//       required this.targetPosition,
-//       required this.board});
-// }
