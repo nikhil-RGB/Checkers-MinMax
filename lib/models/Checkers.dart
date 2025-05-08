@@ -15,7 +15,7 @@ class Checkers {
   List<List<Token>> board = List.generate(8, (i) => List.filled(8, Token.NONE));
   //Board state information is stored in the instance variable above
   int counter = 0; //even means black's turn, odd means white's turn
-
+  // List<Checkers> captureBoards = [];
   //main method here
   static void main() {
     Checkers game = Checkers();
@@ -483,24 +483,48 @@ class Checkers {
       if (isCapture) {
         //also handle chained captures
         //handle all following moves here as well
-        for (List<Point> capDiagonal in moves) {
-          Checkers childBoardCap = refBoard.cloneGame();
-          List<List<Point>> newCaps =
-              childBoardCap.executeCapture(ogLocation, capDiagonal);
-          if (newCaps.isEmpty) {
-            childBoards.add(childBoardCap);
-          }
-          while (newCaps.isNotEmpty) {
-            Checkers contCapBoard = childBoardCap.cloneGame();
-            //handle contd captures
-          }
-        }
+        List<Checkers> captureChildren =
+            refBoard.continuedCapture(ogLocation, moves);
+        childBoards.addAll(captureChildren);
       } else {
         //handle standard move play for minimax
+        List<Point> possibleLocations = moves[1];
+        List<Checkers> children = [];
+        for (Point newLoc in possibleLocations) {
+          Checkers childBoard = refBoard.cloneGame();
+          childBoard.executeStandardMove(ogLocation, newLoc);
+          childBoard.kingAfterMove(newLoc);
+          children.add(childBoard);
+        }
+        childBoards.addAll(children);
       }
-      //Must handle chained captures
     });
     return childBoards;
+  }
+
+  //3- Recursive function to deal with capture moves and their contd capture sequences
+  //This function executes the current capture and also handles continued
+  //captures via recursion.
+  //Assume provided parameters are valid capture sequence instructions
+
+  List<Checkers> continuedCapture(Point source, List<List<Point>> moves) {
+    Checkers refBoard = this;
+    List<Checkers> boards = [];
+    for (List<Point> capDiagonal in moves) {
+      Checkers childBoardCap = refBoard.cloneGame();
+      List<List<Point>> newCaps =
+          childBoardCap.executeCapture(source, capDiagonal);
+      newCaps = childBoardCap.kingAfterMove(capDiagonal[1])
+          ? childBoardCap.captureSequences(capDiagonal[1])
+          : newCaps;
+      if (newCaps.isEmpty) {
+        boards.add(childBoardCap);
+      } else {
+        Point newSource = capDiagonal[1];
+        boards.addAll(childBoardCap.continuedCapture(newSource, newCaps));
+      }
+    }
+    return boards;
   }
 }
 
