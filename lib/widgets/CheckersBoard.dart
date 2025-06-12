@@ -5,13 +5,15 @@ import 'package:checkers/models/Checkers.dart';
 import 'package:checkers/widgets/CheckersPiece.dart';
 import 'package:flutter/material.dart';
 
+// ignore: must_be_immutable
 class CheckersBoard extends StatefulWidget {
   //Reference checkers board object for this widget.
   Checkers referenceBoard;
   LinkedHashMap<Point, List<List<Point>>> possibleMoves;
   Point selectedTile = const Point(0, 0);
   Point contCapturePoint = const Point(-1, -1);
-
+  int nonCapMoveCount = 0;
+  static const int maxNonCapMoveCount = 40;
   @override
   State<CheckersBoard> createState() => _CheckersBoardState();
   CheckersBoard({super.key, required this.referenceBoard})
@@ -138,9 +140,21 @@ class _CheckersBoardState extends State<CheckersBoard> {
       game.setAt(newLocation, piece);
 
       widget.referenceBoard.kingAfterMove(newLocation);
+
+      //Check for n-standard moves game ender
+      ++widget.nonCapMoveCount;
+      if (widget.nonCapMoveCount >= CheckersBoard.maxNonCapMoveCount) {
+        //Game tied, end game with tie dialogue
+        isGameRunning = false;
+        showGameOverDialog(context,
+            "Tie- \n Too many non-capture moves played (>=${CheckersBoard.maxNonCapMoveCount})");
+      }
     } else {
+      widget.nonCapMoveCount =
+          0; //Reset to 0, since a capture is being made now
       //Control reaching here means that a piece must be eliminated alongside moving the reference piece
       //The move type is one of a capture type.
+
       List<Point> selectedDiagonal = [];
       for (List<Point> diagonal in validChoices) {
         if (diagonal[1] == newLocation) {
@@ -226,7 +240,9 @@ void showGameOverDialog(BuildContext context, String winner) {
               ),
               const SizedBox(height: 16),
               Text(
-                '$winner has won the game!', // Removed draw condition
+                (winner.length > 5)
+                    ? winner
+                    : '$winner has won the game!', // Added draw condition
                 style: TextStyle(
                   fontSize: 18,
                   color: Colors.black87,

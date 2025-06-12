@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:checkers/widgets/CheckersBoard.dart';
 import 'package:logger/logger.dart';
 
 void main() {
@@ -17,6 +18,9 @@ class Checkers {
   int counter = 0; //even means black's turn, odd means white's turn
   // List<Checkers> captureBoards = [];
   //main method here
+  int nonCapMovesTemp =
+      0; //This variable is to be used only during minmax calculations to keep track of
+  //whetehr or not max non-cap move count is exceeded for a particular board
   static void main() {
     Checkers game = Checkers();
     game.initBoard();
@@ -463,15 +467,24 @@ class Checkers {
 
   //1- This function clones the current board and returns a copy of it
   Checkers cloneGame() {
+    //Add copy over for temp count field here
     Checkers cloneBoard = Checkers();
     cloneBoard.board =
         this.board.map((innerList) => List<Token>.from(innerList)).toList();
+    cloneBoard.counter = this.counter;
+    cloneBoard.nonCapMovesTemp = this.nonCapMovesTemp;
     return cloneBoard;
   }
 
   //2- This function returns a List of all the children from a current board
   //i.e: All possible boards which can emerge from one reference state(this)
+  //Board passed to this function or a higher level function which calls this one must have
+  // its TEMP_NOCAP_COUNT set MANUALLY and CORRECTLY, this information can be
+  //copied over from a CheckersBoard object, which represents the whole game with it's app UI.
   List<Checkers> stepInto() {
+    if (this.nonCapMovesTemp >= CheckersBoard.maxNonCapMoveCount) {
+      return [];
+    }
     Checkers refBoard = this;
     List<Checkers> childBoards = [];
     LinkedHashMap<Point, List<List<Point>>> availableMoves =
@@ -483,6 +496,7 @@ class Checkers {
       if (isCapture) {
         //also handle chained captures
         //handle all following moves here as well
+        refBoard.nonCapMovesTemp = 0;
         List<Checkers> captureChildren =
             refBoard.continuedCapture(ogLocation, moves);
         childBoards.addAll(captureChildren);
@@ -494,6 +508,7 @@ class Checkers {
           Checkers childBoard = refBoard.cloneGame();
           childBoard.executeStandardMove(ogLocation, newLoc);
           childBoard.kingAfterMove(newLoc);
+          ++childBoard.nonCapMovesTemp;
           children.add(childBoard);
         }
         childBoards.addAll(children);
@@ -525,6 +540,40 @@ class Checkers {
       }
     }
     return boards;
+  }
+
+  //4- Static evaluation function for current board state
+  //The player is black and the AI is white so white will be the max player,
+  //black will be the min player
+  int evaluate() {
+    return this.materialEvaluation();
+  }
+
+  //Currently simple material count evaluation only
+  int materialEvaluation() {
+    List<List<Token>> board = this.board;
+    int material_score = 0;
+    for (int i = 0; i < 8; ++i) {
+      for (int j = 0; j < 8; ++j) {
+        Token piece = board[i][j];
+        switch (piece) {
+          case Token.WHITE_KING:
+            material_score += 3;
+            break;
+          case Token.WHITE_SOLDIER:
+            material_score += 1;
+            break;
+          case Token.BLACK_KING:
+            material_score -= 3;
+            break;
+          case Token.BLACK_SOLDIER:
+            material_score -= 1;
+            break;
+          default:
+        }
+      }
+    }
+    return material_score;
   }
 }
 
