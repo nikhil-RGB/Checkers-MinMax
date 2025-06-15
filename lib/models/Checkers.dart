@@ -3,6 +3,7 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+
 import 'dart:math';
 
 import 'package:checkers/widgets/CheckersBoard.dart';
@@ -546,6 +547,23 @@ class Checkers {
   //The player is black and the AI is white so white will be the max player,
   //black will be the min player
   int evaluate() {
+    //evaluate for win/loss situation first- either by piece elimination or
+    //no moves available to perform. Also check for tie condition, non cap move limit exceeded.
+    //if no hits, return material evaluation.
+
+    //1- Tie condition
+    if (nonCapMovesTemp >= CheckersBoard.maxNonCapMoveCount) {
+      return 0; //Tie
+    }
+    //2- Win condition - WHITE is maximizing
+    if (movesMap().isEmpty) {
+      String winner = getContraryColour();
+      return (winner == "W")
+          ? double.maxFinite.toInt()
+          : -double.maxFinite.toInt();
+    }
+
+    //3- standard evaluation.Evaluation based on material count ONLY(FOR NOW).
     return this.materialEvaluation();
   }
 

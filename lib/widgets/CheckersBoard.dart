@@ -21,6 +21,7 @@ class CheckersBoard extends StatefulWidget {
 }
 
 class _CheckersBoardState extends State<CheckersBoard> {
+  bool isAIControlled = false;
   bool isGameRunning = true;
   List<Point> greenPoints = [];
   @override
