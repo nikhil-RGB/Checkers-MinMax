@@ -223,7 +223,7 @@ void showGameOverDialog(BuildContext context, String winner) {
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.brown, width: 2),
+          side: const BorderSide(color: Colors.brown, width: 2),
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
