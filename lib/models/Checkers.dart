@@ -641,7 +641,7 @@ class Checkers {
 
         minEval = min(eval, minEval);
         beta = min(beta, eval);
-        if (beta <= eval) {
+        if (beta <= alpha) {
           break;
         }
       }

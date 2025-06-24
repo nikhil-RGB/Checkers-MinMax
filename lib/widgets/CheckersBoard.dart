@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:checkers/models/Checkers.dart';
@@ -21,7 +22,7 @@ class CheckersBoard extends StatefulWidget {
 }
 
 class _CheckersBoardState extends State<CheckersBoard> {
-  bool isAIControlled = false;
+  bool isAIControlled = true;
   bool isGameRunning = true;
   List<Point> greenPoints = [];
   @override
@@ -87,6 +88,11 @@ class _CheckersBoardState extends State<CheckersBoard> {
       //contd capture mode
       return;
     }
+    //block if AI opponent is enabled and it is white's turn
+    if (isAIControlled && widget.referenceBoard.getColour() == "W") {
+      //AI's turn,block inputs
+      return;
+    }
     setState(() {
       widget.selectedTile = Point(r, c);
     });
@@ -113,6 +119,11 @@ class _CheckersBoardState extends State<CheckersBoard> {
     if (widget.possibleMoves.isEmpty ||
         !widget.possibleMoves.containsKey(widget.selectedTile) ||
         !isGameRunning) {
+      return;
+    }
+//Check if AI is enabled and it is it's turn to play
+    if (isAIControlled && widget.referenceBoard.getColour() == "W") {
+      //AI's turn,block inputs
       return;
     }
     //Currently selected long press tile has valid moves available
@@ -211,6 +222,22 @@ class _CheckersBoardState extends State<CheckersBoard> {
       String winner = widget.referenceBoard.getContraryColour();
       winner = (winner == "W") ? "White" : "Black";
       showGameOverDialog(context, winner);
+    } else //if game is not over, check for AI being enabled and allow AI to play if it
+    {
+      //is it's turn
+      if (!(isAIControlled && widget.referenceBoard.getColour() == "W")) {
+        //NOT AI's turn, terminate
+        return;
+      }
+      Isolate.run(() =>
+          Checkers.beginMinimax(
+              widget.referenceBoard, widget.nonCapMoveCount)).then((board) => {
+            //write code here to finish up setting new board and resetting state values to mimic a human move
+            setState(() {
+              widget.referenceBoard = board;
+              widget.nonCapMoveCount = board.nonCapMovesTemp;
+            })
+          });
     }
   }
 }
