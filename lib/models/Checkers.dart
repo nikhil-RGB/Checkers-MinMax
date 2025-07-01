@@ -503,6 +503,7 @@ class Checkers {
         List<Checkers> captureChildren =
             refBoard.continuedCapture(ogLocation, moves);
         childBoards.addAll(captureChildren);
+        --refBoard.counter; //handle counter
       } else {
         //handle standard move play for minimax
         List<Point> possibleLocations = moves[1];
@@ -658,6 +659,15 @@ class Checkers {
         double.maxFinite.toInt(), true, 4);
     Checkers newPos = depthNOptions[finalEval]!;
     return newPos; //new Pos has an updated counter and tempMove count, alongside an updated board.
+  }
+
+  //Prints all information about the board via a Logger object into terminal
+  void debug() {
+    Logger().i("Counter: $counter");
+    Logger().i("Non cap moves temp: $nonCapMovesTemp");
+    Logger().i("Current color: ${getColour()}");
+    Logger().i("\n\n\n");
+    this.printBoard();
   }
 }
 
