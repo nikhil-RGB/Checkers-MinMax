@@ -35,6 +35,10 @@ This project aims at creating a mobile app which will allow users to play checke
 - Game over detection
 - Winner declaration dialog
 
-## Coming Soon
+## AI Opponent(beta)
 
-🔜 **AI Opponent** (Minimax algorithm)  
+- A basic AI opponent has been implemented using the Minimax with alpha beta pruning.
+- The tree goes 4 levels deep before running the evaluation function.
+- The evaluation function performs a standard material evaluation with a 3x multiplier for king pieces. Positional advantage        scores might be added to the function in the future.   
+- The option to switch between AI and a normal human player will be added soon.
+- When the AI performs consecutive captures, it will not be shown step by step. This will be changed in the future in favour of a   better UX.
