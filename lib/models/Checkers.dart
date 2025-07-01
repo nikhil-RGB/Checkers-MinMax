@@ -3,6 +3,7 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+
 import 'dart:math';
 
 import 'package:checkers/widgets/CheckersBoard.dart';
@@ -13,6 +14,7 @@ void main() {
 }
 
 class Checkers {
+  static HashMap<int, Checkers> depthNOptions = HashMap<int, Checkers>();
   List<List<Token>> board = List.generate(8, (i) => List.filled(8, Token.NONE));
   //Board state information is stored in the instance variable above
   int counter = 0; //even means black's turn, odd means white's turn
@@ -497,9 +499,11 @@ class Checkers {
         //also handle chained captures
         //handle all following moves here as well
         refBoard.nonCapMovesTemp = 0;
+        ++refBoard.counter; //handle counter
         List<Checkers> captureChildren =
             refBoard.continuedCapture(ogLocation, moves);
         childBoards.addAll(captureChildren);
+        --refBoard.counter; //handle counter
       } else {
         //handle standard move play for minimax
         List<Point> possibleLocations = moves[1];
@@ -509,6 +513,7 @@ class Checkers {
           childBoard.executeStandardMove(ogLocation, newLoc);
           childBoard.kingAfterMove(newLoc);
           ++childBoard.nonCapMovesTemp;
+          ++childBoard.counter; //handle counter
           children.add(childBoard);
         }
         childBoards.addAll(children);
@@ -546,10 +551,27 @@ class Checkers {
   //The player is black and the AI is white so white will be the max player,
   //black will be the min player
   int evaluate() {
+    //evaluate for win/loss situation first- either by piece elimination or
+    //no moves available to perform. Also check for tie condition, non cap move limit exceeded.
+    //if no hits, return material evaluation.
+
+    //1- Tie condition
+    if (nonCapMovesTemp >= CheckersBoard.maxNonCapMoveCount) {
+      return 0; //Tie
+    }
+    //2- Win condition - WHITE is maximizing
+    if (movesMap().isEmpty) {
+      String winner = getContraryColour();
+      return (winner == "W")
+          ? double.maxFinite.toInt()
+          : -double.maxFinite.toInt();
+    }
+
+    //3- standard evaluation.Evaluation based on material count ONLY(FOR NOW).
     return this.materialEvaluation();
   }
 
-  //Currently simple material count evaluation only
+  //5- Currently simple material count evaluation only
   int materialEvaluation() {
     List<List<Token>> board = this.board;
     int material_score = 0;
@@ -574,6 +596,78 @@ class Checkers {
       }
     }
     return material_score;
+  }
+
+  //6- Minimax function--> WHITE IS MAXIMIZING PLAYER, BLACK IS MINIMIZING PLAYER
+  static int minimax(Checkers position, int depth, int alpha, int beta,
+      bool maximizingPlayer, int depth_n) {
+    if (depth == 0 ||
+        position.nonCapMovesTemp >= CheckersBoard.maxNonCapMoveCount ||
+        position.movesMap().isEmpty) {
+      return position.evaluate();
+    }
+    //rest here
+    if (maximizingPlayer) {
+      int maxEval = -double.maxFinite.toInt();
+      List<Checkers> boards = position.stepInto();
+      for (Checkers board in boards) {
+        int eval =
+            Checkers.minimax(board, depth - 1, alpha, beta, false, depth_n);
+        //here, check depth
+        if (depth == depth_n) {
+          depthNOptions[eval] = board;
+          //add move and evaluation to hash map for depth-n moves
+        }
+        maxEval = max(maxEval, eval);
+        alpha = max(eval, alpha);
+        if (beta <= alpha) {
+          break;
+        }
+      }
+      return maxEval;
+    }
+    //Now, for minimizing player:
+    else {
+      int minEval = double.maxFinite.toInt();
+      List<Checkers> boards = position.stepInto();
+      for (Checkers board in boards) {
+        int eval =
+            Checkers.minimax(board, depth - 1, alpha, beta, true, depth_n);
+
+        //here, check depth
+        if (depth == depth_n) {
+          depthNOptions[eval] = board;
+          //add move and evaluation to hash map for depth-n moves
+        }
+
+        minEval = min(eval, minEval);
+        beta = min(beta, eval);
+        if (beta <= alpha) {
+          break;
+        }
+      }
+      return minEval;
+    }
+  }
+
+  //7- Starts the minimax algorithm and returns the best move
+  static Checkers beginMinimax(Checkers targetBoard, int nonCapMoves) {
+    depthNOptions.clear();
+    Checkers referenceBoard = targetBoard.cloneGame();
+    referenceBoard.nonCapMovesTemp = nonCapMoves;
+    int finalEval = minimax(referenceBoard, 4, -double.maxFinite.toInt(),
+        double.maxFinite.toInt(), true, 4);
+    Checkers newPos = depthNOptions[finalEval]!;
+    return newPos; //new Pos has an updated counter and tempMove count, alongside an updated board.
+  }
+
+  //Prints all information about the board via a Logger object into terminal
+  void debug() {
+    Logger().i("Counter: $counter");
+    Logger().i("Non cap moves temp: $nonCapMovesTemp");
+    Logger().i("Current color: ${getColour()}");
+    Logger().i("\n\n\n");
+    this.printBoard();
   }
 }
 

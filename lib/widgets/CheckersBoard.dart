@@ -1,9 +1,11 @@
 import 'dart:collection';
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:checkers/models/Checkers.dart';
 import 'package:checkers/widgets/CheckersPiece.dart';
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 
 // ignore: must_be_immutable
 class CheckersBoard extends StatefulWidget {
@@ -21,6 +23,7 @@ class CheckersBoard extends StatefulWidget {
 }
 
 class _CheckersBoardState extends State<CheckersBoard> {
+  bool isAIControlled = true;
   bool isGameRunning = true;
   List<Point> greenPoints = [];
   @override
@@ -84,6 +87,15 @@ class _CheckersBoardState extends State<CheckersBoard> {
   void handleTileLongPress(int r, int c) {
     if ((widget.contCapturePoint != const Point(-1, -1)) || !isGameRunning) {
       //contd capture mode
+      Logger().w(
+          "Control denied isGameRunning= $isGameRunning and contd capture point = ${widget.contCapturePoint.toString()}");
+      return;
+    }
+    //block if AI opponent is enabled and it is white's turn
+    if (isAIControlled && widget.referenceBoard.getColour() == "W") {
+      Logger()
+          .w("Control denied, colour= ${widget.referenceBoard.getColour()}");
+      //AI's turn,block inputs
       return;
     }
     setState(() {
@@ -108,10 +120,15 @@ class _CheckersBoardState extends State<CheckersBoard> {
 
   //handle selection for final destination of piece-SHORT PRESS
   //also has to handle win condition checking and kinging of tokens
-  void handleTilePress(int r, int c) {
+  void handleTilePress(int r, int c) async {
     if (widget.possibleMoves.isEmpty ||
         !widget.possibleMoves.containsKey(widget.selectedTile) ||
         !isGameRunning) {
+      return;
+    }
+//Check if AI is enabled and it is it's turn to play
+    if (isAIControlled && widget.referenceBoard.getColour() == "W") {
+      //AI's turn,block inputs
       return;
     }
     //Currently selected long press tile has valid moves available
@@ -210,6 +227,54 @@ class _CheckersBoardState extends State<CheckersBoard> {
       String winner = widget.referenceBoard.getContraryColour();
       winner = (winner == "W") ? "White" : "Black";
       showGameOverDialog(context, winner);
+    } else //if game is not over, check for AI being enabled and allow AI to play if it
+    {
+      //is it's turn
+      if (!(isAIControlled && widget.referenceBoard.getColour() == "W")) {
+        //NOT AI's turn, terminate
+        return;
+      }
+      //move start print data
+      Logger().wtf("After User Move");
+      widget.referenceBoard.debug();
+      await Future.delayed(const Duration(seconds: 2), () {});
+      Checkers board =
+          Checkers.beginMinimax(widget.referenceBoard, widget.nonCapMoveCount);
+
+      //write code here to finish up setting new board and resetting state values to mimic a human move
+      setState(() {
+        //board.counter++;
+        widget.referenceBoard = board;
+        widget.possibleMoves = widget.referenceBoard.movesMap();
+        widget.selectedTile = const Point(0, 0);
+
+        widget.nonCapMoveCount = widget.referenceBoard.nonCapMovesTemp;
+
+        //move end print data
+        Logger().wtf("After AI Move");
+        widget.referenceBoard.debug();
+      });
+//Check if AI won
+
+      if (widget.possibleMoves.isEmpty) {
+        isGameRunning = false;
+        String winner = widget.referenceBoard.getContraryColour();
+        winner = (winner == "W") ? "White" : "Black";
+        showGameOverDialog(context, winner);
+      }
+
+//End check
+
+//Check if AI caused tie by non-cap move limit
+
+      if (widget.nonCapMoveCount >= CheckersBoard.maxNonCapMoveCount) {
+        //Game tied, end game with tie dialogue
+        isGameRunning = false;
+        showGameOverDialog(context,
+            "Tie- \n Too many non-capture moves played (>=${CheckersBoard.maxNonCapMoveCount})");
+      }
+
+//End check
     }
   }
 }
@@ -223,7 +288,7 @@ void showGameOverDialog(BuildContext context, String winner) {
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.brown, width: 2),
+          side: const BorderSide(color: Colors.brown, width: 2),
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
