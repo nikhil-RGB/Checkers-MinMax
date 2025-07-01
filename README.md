@@ -2,7 +2,7 @@
 
 <br>
 
-This project aims at creating a mobile app which will allow users to play checkers against one another locally, or against an AI minmax opponent. As of now, the computer opponent has not been implemented.
+This project aims at creating a mobile app which will allow users to play checkers against one another locally, or against an AI minmax opponent. As of now, a basic computer opponent has been implemented.
 
 <br>
 
