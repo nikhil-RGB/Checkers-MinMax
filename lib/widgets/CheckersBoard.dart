@@ -1,5 +1,6 @@
+// ignore_for_file: unnecessary_this
+
 import 'dart:collection';
-import 'dart:isolate';
 import 'dart:math';
 
 import 'package:checkers/models/Checkers.dart';
@@ -9,6 +10,11 @@ import 'package:logger/logger.dart';
 
 // ignore: must_be_immutable
 class CheckersBoard extends StatefulWidget {
+  //This field can be used to visually determine what move the AI has played.
+  List<Point> redOutlineField = [];
+  //The field below can be used to visually determine which pieces the AI
+  //has captured.
+  List<Point> redFilledField = [];
   //Reference checkers board object for this widget.
   Checkers referenceBoard;
   LinkedHashMap<Point, List<List<Point>>> possibleMoves;
@@ -66,14 +72,18 @@ class _CheckersBoardState extends State<CheckersBoard> {
         decoration: BoxDecoration(
           color: greenPoints.contains(Point(row, col))
               ? Colors.greenAccent
-              : !isPlayable
-                  ? Colors.white
-                  : Colors.brown,
+              : widget.redFilledField.contains(Point(row, col))
+                  ? Colors.redAccent
+                  : !isPlayable
+                      ? Colors.white
+                      : Colors.brown,
           border: Border.all(
               width: 2.5,
               color: (widget.selectedTile == Point(row, col))
                   ? Colors.greenAccent
-                  : Colors.black12),
+                  : (widget.redOutlineField.contains(Point(row, col)))
+                      ? Colors.redAccent
+                      : Colors.black12),
         ),
         child: Center(
           child: CheckersPiece(tokType: piece.toString()),
@@ -100,6 +110,8 @@ class _CheckersBoardState extends State<CheckersBoard> {
     }
     setState(() {
       widget.selectedTile = Point(r, c);
+      widget.redOutlineField.clear();
+      widget.redFilledField.clear();
     });
 
     // Token reference = widget.referenceBoard.board[r][c];
@@ -237,18 +249,25 @@ class _CheckersBoardState extends State<CheckersBoard> {
       //move start print data
       Logger().wtf("After User Move");
       widget.referenceBoard.debug();
-      await Future.delayed(const Duration(seconds: 2), () {});
+      await Future.delayed(
+          const Duration(seconds: 1, milliseconds: 600), () {});
       Checkers board =
           Checkers.beginMinimax(widget.referenceBoard, widget.nonCapMoveCount);
-
+      List<List<Point>> outlineAndFilledList =
+          this.tileColorCheck(widget.referenceBoard, board);
+      setState(() {
+        widget.redOutlineField = outlineAndFilledList[0];
+      });
+      await Future.delayed(
+          const Duration(seconds: 1, milliseconds: 940), () {});
       //write code here to finish up setting new board and resetting state values to mimic a human move
       setState(() {
-        //board.counter++;
         widget.referenceBoard = board;
         widget.possibleMoves = widget.referenceBoard.movesMap();
         widget.selectedTile = const Point(0, 0);
-
         widget.nonCapMoveCount = widget.referenceBoard.nonCapMovesTemp;
+
+        widget.redFilledField = outlineAndFilledList[1];
 
         //move end print data
         Logger().wtf("After AI Move");
@@ -276,6 +295,33 @@ class _CheckersBoardState extends State<CheckersBoard> {
 
 //End check
     }
+  }
+
+  //Return a List to compare the boards and return a list of list of points for
+  //red outline(self-movement)-0 and red filled(captured enemies)-1
+  List<List<Point>> tileColorCheck(Checkers originalBoard, Checkers newBoard) {
+    List<Point> redFilled = []; //1
+    List<Point> redOutline = []; //0
+    for (int i = 0; i < 8; ++i) {
+      for (int j = 0; j < 8; ++j) {
+        //Since the AI has completed it's turn by the time
+        //this function is called, it is black's turn now
+        //Since it is black's turn, consider the opposite color(white) for all computations.
+        Token ogPiece = originalBoard.board[i][j];
+        Token newPiece = newBoard.board[i][j];
+        //red outline means that the spot has a white piece moved
+        //into or out of it. Filled means captured black piece.
+        if ((ogPiece.isWhite() && newPiece == Token.NONE) ||
+            (ogPiece == Token.NONE && newPiece.isWhite())) {
+          //insert red outline at location's tile
+          redOutline.add(Point(i, j));
+        } else if (ogPiece.isBlack() && newPiece == Token.NONE) {
+          redFilled.add(Point(i, j));
+        }
+      }
+    }
+    List<List<Point>> result = [redOutline, redFilled];
+    return result;
   }
 }
 
