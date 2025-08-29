@@ -1,4 +1,5 @@
 import 'package:checkers/pages/HomeBoardPage.dart';
+import 'package:checkers/pages/InitializationPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.redAccent),
         useMaterial3: true,
       ),
-      home: HomeCheckersPage(),
+      home: InitializationPage(),
     );
   }
 }

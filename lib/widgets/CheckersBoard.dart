@@ -10,6 +10,7 @@ import 'package:logger/logger.dart';
 
 // ignore: must_be_immutable
 class CheckersBoard extends StatefulWidget {
+  bool isAIControlled;
   //This field can be used to visually determine what move the AI has played.
   List<Point> redOutlineField = [];
   //The field below can be used to visually determine which pieces the AI
@@ -21,15 +22,17 @@ class CheckersBoard extends StatefulWidget {
   Point selectedTile = const Point(0, 0);
   Point contCapturePoint = const Point(-1, -1);
   int nonCapMoveCount = 0;
-  static const int maxNonCapMoveCount = 40;
+  static int maxNonCapMoveCount = 40;
   @override
   State<CheckersBoard> createState() => _CheckersBoardState();
-  CheckersBoard({super.key, required this.referenceBoard})
+  CheckersBoard(
+      {required super.key,
+      required this.referenceBoard,
+      required this.isAIControlled})
       : possibleMoves = referenceBoard.movesMap();
 }
 
 class _CheckersBoardState extends State<CheckersBoard> {
-  bool isAIControlled = true;
   bool isGameRunning = true;
   List<Point> greenPoints = [];
   @override
@@ -102,7 +105,7 @@ class _CheckersBoardState extends State<CheckersBoard> {
       return;
     }
     //block if AI opponent is enabled and it is white's turn
-    if (isAIControlled && widget.referenceBoard.getColour() == "W") {
+    if (widget.isAIControlled && widget.referenceBoard.getColour() == "W") {
       Logger()
           .w("Control denied, colour= ${widget.referenceBoard.getColour()}");
       //AI's turn,block inputs
@@ -139,7 +142,7 @@ class _CheckersBoardState extends State<CheckersBoard> {
       return;
     }
 //Check if AI is enabled and it is it's turn to play
-    if (isAIControlled && widget.referenceBoard.getColour() == "W") {
+    if (widget.isAIControlled && widget.referenceBoard.getColour() == "W") {
       //AI's turn,block inputs
       return;
     }
@@ -242,7 +245,8 @@ class _CheckersBoardState extends State<CheckersBoard> {
     } else //if game is not over, check for AI being enabled and allow AI to play if it
     {
       //is it's turn
-      if (!(isAIControlled && widget.referenceBoard.getColour() == "W")) {
+      if (!(widget.isAIControlled &&
+          widget.referenceBoard.getColour() == "W")) {
         //NOT AI's turn, terminate
         return;
       }

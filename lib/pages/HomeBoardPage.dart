@@ -4,15 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 
 class HomeCheckersPage extends StatefulWidget {
+  CheckersBoard referenceGame;
   @override
   State<HomeCheckersPage> createState() => _HomeCheckersPageState();
+  HomeCheckersPage({super.key, required this.referenceGame});
 }
 
 class _HomeCheckersPageState extends State<HomeCheckersPage> {
   @override
   Widget build(BuildContext context) {
-    Checkers referenceGame = Checkers();
-    referenceGame.initBoard();
+    // Checkers referenceGame = Checkers();
+    // referenceGame.initBoard();
     return SafeArea(
         child: Scaffold(
       appBar: AppBar(
@@ -39,7 +41,7 @@ class _HomeCheckersPageState extends State<HomeCheckersPage> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            child: CheckersBoard(referenceBoard: referenceGame),
+            child: widget.referenceGame,
           ),
         ),
       ),
@@ -94,7 +96,23 @@ class _HomeCheckersPageState extends State<HomeCheckersPage> {
                           ),
                           minimumSize: const Size(120, 40),
                         ),
-                        onPressed: () => Phoenix.rebirth(context),
+                        onPressed: () {
+                          Checkers board = Checkers();
+                          board.initBoard();
+                          String keytext = widget.referenceGame.key.toString();
+                          keytext = keytext.replaceAll(RegExp(r'\D'), "");
+                          keytext = (int.parse(keytext) + 1).toString();
+
+                          CheckersBoard nboard = CheckersBoard(
+                              key: Key(keytext),
+                              referenceBoard: board,
+                              isAIControlled:
+                                  widget.referenceGame.isAIControlled);
+                          setState(() {
+                            widget.referenceGame = nboard;
+                          });
+                          Navigator.pop(context);
+                        },
                         child: const Text('OK'),
                       ),
                       const SizedBox(
