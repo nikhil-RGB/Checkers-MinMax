@@ -4,6 +4,9 @@ import 'package:checkers/widgets/CheckersBoard.dart';
 import 'package:checkers/widgets/CheckersPiece.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+final Uri _url = Uri.parse('https://youtu.be/jxpIk7irvUE');
 
 class InitializationPage extends StatefulWidget {
   @override
@@ -101,6 +104,15 @@ class _InitializationPageState extends State<InitializationPage> {
                     },
                     child: const Text(
                       " Play against AI  ",
+                      style: TextStyle(fontSize: 17),
+                    )),
+                const Gap(12),
+                ElevatedButton(
+                    onPressed: () {
+                      _launchUrl(context);
+                    },
+                    child: const Text(
+                      "How to Play",
                       style: TextStyle(fontSize: 17),
                     )),
                 const Gap(40),
@@ -239,4 +251,45 @@ class _MoveLimitDialogState extends State<_MoveLimitDialog> {
       ],
     );
   }
+}
+
+//Launch URL
+Future<void> _launchUrl(BuildContext context) async {
+  if (!await launchUrl(
+    _url,
+  )) {
+    _showErrorDialog(context);
+  }
+}
+
+Future<void> _showErrorDialog(BuildContext context) async {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: false, // User must tap the button to close.
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text(
+          'Error',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        content: const SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              Text(
+                  'The app was unable to launch the YouTube video associated with this button.'),
+              Text('Please check your internet connection.'),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
 }

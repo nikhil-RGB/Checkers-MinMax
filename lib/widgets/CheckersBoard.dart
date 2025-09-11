@@ -252,7 +252,7 @@ class _CheckersBoardState extends State<CheckersBoard> {
       }
       //move start print data
       Logger().wtf("After User Move");
-      widget.referenceBoard.debug();
+      //widget.referenceBoard.debug();
       await Future.delayed(
           const Duration(seconds: 1, milliseconds: 600), () {});
       Checkers board =
@@ -275,7 +275,7 @@ class _CheckersBoardState extends State<CheckersBoard> {
 
         //move end print data
         Logger().wtf("After AI Move");
-        widget.referenceBoard.debug();
+        //widget.referenceBoard.debug();
       });
 //Check if AI won
 
